@@ -453,13 +453,18 @@ else if( (strncmp("ps\n",str,4)) == 0)
         itoa(tasks[i].pid, string);
         write(fdout, string, strlen(string)+1);
         write(fdout, "\t", 2);
-		
-		if(strcmp("TASK_READY",tasks[i].status)){write(fdout, "TASK READY\t", 12);}
-		else if(strcmp("TASK_WAIT_READ",tasks[i].status) ){write(fdout, "TASK_WAIT_READ\t", 16);}
-		else if(strcmp("TASK_WAIT_WRITE",tasks[i].status)){write(fdout, "TASK_WAIT_WRITE\t", 17);}
-		else if(strcmp("TASK_WAIT_INTR",tasks[i].status)){write(fdout, "TASK_WAIT_INTR\t", 16);}
-		else if(strcmp("TASK_WAIT_TIME",tasks[i].status)){write(fdout, "TASK_WAIT_TIME\t", 16);}
-
+		if(tasks[i].status == TASK_READY){write(fdout, "TASK READY\t", 12);}
+		else if(tasks[i].status == TASK_WAIT_READ){write(fdout, "TASK_WAIT_READ\t", 16);}
+		else if(tasks[i].status == TASK_WAIT_WRITE){write(fdout, "TASK_WAIT_WRITE\t", 17);}
+		else if(tasks[i].status == TASK_WAIT_INTR){write(fdout, "TASK_WAIT_INTR\t", 16);}
+		else if(tasks[i].status == TASK_WAIT_TIME){write(fdout, "TASK_WAIT_TIME\t", 16);}
+		/*
+		if(strncmp("TASK_READY",tasks[i].status,10) ){write(fdout, "TASK READY\t", 12);}
+		else if(strncmp("TASK_WAIT_READ",tasks[i].status,14) ){write(fdout, "TASK_WAIT_READ\t", 16);}
+		else if(strncmp("TASK_WAIT_WRITE",tasks[i].status,15)){write(fdout, "TASK_WAIT_WRITE\t", 17);}
+		else if(strncmp("TASK_WAIT_INTR",tasks[i].status,14)){write(fdout, "TASK_WAIT_INTR\t", 16);}
+		else if(strncmp("TASK_WAIT_TIME",tasks[i].status,14)){write(fdout, "TASK_WAIT_TIME\t", 16);}
+*/
         itoa(tasks[i].priority, string);
         write(fdout, string, strlen(str)+1);
         write(fdout, "\n\r",3);
