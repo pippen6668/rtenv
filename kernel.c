@@ -6,6 +6,8 @@
 #include <stddef.h>
 
 void *memcpy(void *dest, const void *src, size_t n);
+void and_shell();
+void Instruction();
 
 int strcmp(const char *a, const char *b) __attribute__ ((naked));
 int strcmp(const char *a, const char *b)
@@ -326,10 +328,10 @@ void serial_readwrite_task()
 	fdin = open("/dev/tty0/in", 0);
 
 	/* Prepare the response message to be queued. */
-	memcpy(str, "Got:", 4);
+	//memcpy(str, "Got:", 4);
 
 	while (1) {
-		curr_char = 4;
+		curr_char = 0;
 		done = 0;
 		do {
 			/* Receive a byte from the RS232 port (this call will
@@ -358,6 +360,134 @@ void serial_readwrite_task()
 	}
 }
 
+void Instruction(char* str)
+{
+int fdout, fdin;
+fdout = mq_open("/tmp/mqueue/out", 0);
+fdin = open("/dev/tty0/in", 0);
+
+if( (strncmp("help",str,4)) == 0)
+{
+  write(fdout, "\n\recho  -- print what you type", strlen("\n\recho  -- print what you type")+1);
+  write(fdout, "\n\rhello -- output 'HELLO!!' ", strlen("\n\"\n\rhello -- output 'HELLO!!' ")+1);
+  write(fdout, "\n\rps    -- output the number of tasks", strlen("\n\rps    -- output the number of tasks")+1);
+  
+}
+
+else if( (strncmp("hello\n",str,6)) == 0 )
+{ write(fdout, "\n\r'HELLO'", strlen("\n\r'HELLO'")+1);
+
+}
+
+else if( (strncmp("echo ",str,5)) == 0 )
+{ //write(fdout, "\n\r'HELLO'", strlen("\n\r'HELLO'")+1);
+	int i=5;
+	//write(fdout,"\r\n",3); //會出問題???
+	write(fdout,"\n",2);
+	write(fdout,"\r",2);
+	while(str[i] != '\n')
+	{ 
+	 write(fdout,str+i,1);
+	 i++;
+    }
+}
+else if( (strncmp("ps\n",str,4)) == 0)
+{
+}
+
+else
+ { 
+   write(fdout,"\n\rinput error,type help to get more information",48);
+ }
+  
+}
+
+void and_shell()
+{
+	int fdout, fdin;
+	char str[100];
+	char ch; //有問題@@
+	char ch_type[2];
+	
+	int curr_char;
+	int done;
+
+	fdout = mq_open("/tmp/mqueue/out", 0);
+	fdin = open("/dev/tty0/in", 0);
+
+	/* Prepare the response message to be queued. */
+	//memcpy(str, "Got:", 4);
+
+	while (1) {
+	    write(fdout,"\rand-rtenv:",12);
+		curr_char = 0;
+		done = 0;
+		do {
+			/* Receive a byte from the RS232 port (this call will
+			 * block). */
+			read(fdin, &ch, 1);
+
+			/* If the byte is an end-of-line type character, then
+			 * finish the string and inidcate we are done.
+			 */
+			if (curr_char >= 98 || (ch == '\r') || (ch == '\n')) {
+				str[curr_char] = '\n';
+				str[curr_char+1] = '\0';
+				done = -1;
+				/* Otherwise, add the character to the
+				 * response string. */
+			}
+			
+			//backspace
+			else if(ch == 127)          
+			{
+				if(curr_char != 0)
+			    {
+					curr_char--;
+                    write(fdout, "\b", 2);
+                    write(fdout, " ", 2);
+                    write(fdout, "\b", 2);
+				}
+			
+			
+			}  
+			
+			else {
+				str[curr_char++] = ch;
+				//write(fdout, "12\n\r", 5);
+				ch_type[0]=ch;
+				write(fdout,ch_type,2);
+			}
+		} while (!done);
+        
+		
+		//write(fdout, "\n\r", 3);
+		
+		if( (curr_char++) >0)
+		{
+			Instruction(str);
+		}
+		write(fdout, "\n\r", 3);
+		
+		/* Once we are done building the response string, queue the
+		 * response to be sent to the RS232 port.
+		 */
+		//write(fdout, str, curr_char+1+1);
+	}
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
 void first()
 {
 	setpriority(0, 0);
@@ -366,9 +496,10 @@ void first()
 	if (!fork()) setpriority(0, 0), serialout(USART2, USART2_IRQn);
 	if (!fork()) setpriority(0, 0), serialin(USART2, USART2_IRQn);
 	if (!fork()) rs232_xmit_msg_task();
-	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), queue_str_task1();
-	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), queue_str_task2();
-	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), serial_readwrite_task();
+	///if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), queue_str_task1();
+	//if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), queue_str_task2();
+	//if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), serial_readwrite_task();
+	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), and_shell();
 
 	setpriority(0, PRIORITY_LIMIT);
 
