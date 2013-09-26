@@ -98,6 +98,7 @@ struct user_thread_stack {
 };
 
 /* Task Control Block */
+/*
 struct task_control_block {
     struct user_thread_stack *stack;
     int pid;
@@ -106,7 +107,23 @@ struct task_control_block {
     struct task_control_block **prev;
     struct task_control_block  *next;
 };
+*/
 
+struct task_control_block {
+    struct user_thread_stack *stack;
+    int pid;
+    int status;
+    int priority;
+    struct task_control_block **prev;
+    struct task_control_block  *next;
+	 
+	//size_t *task_count;
+
+};
+
+struct task_control_block tasks[TASK_LIMIT];
+size_t task_count = 0;
+//struct task_control_block runtask;
 /* 
  * pathserver assumes that all files are FIFOs that were registered
  * with mkfifo.  It also assumes a global tables of FDs shared by all
@@ -360,6 +377,41 @@ void serial_readwrite_task()
 	}
 }
 
+char* itoa(int num, char* string)
+{
+    int i=1;
+	int num2=num;
+	
+	if(num2 < 10)
+	{   string[0]=num%10+48;
+	    string[1]='\0';
+	    return string;
+	}
+    while(num2 > 9)
+    {
+        
+        num2 /=10;
+	    i++;
+	}
+	
+	num2=num;
+	i=i-1;
+	while(num2>0)
+	{
+	  string[i]= (num2 %10)+48;
+	  num2/=10;
+	  i--;
+	}
+	
+    string[i]='\0';
+    return string;
+
+}
+
+
+
+
+
 void Instruction(char* str)
 {
 int fdout, fdin;
@@ -368,7 +420,7 @@ fdin = open("/dev/tty0/in", 0);
 
 if( (strncmp("help",str,4)) == 0)
 {
-  write(fdout, "\n\recho  -- print what you type", strlen("\n\recho  -- print what you type")+1);
+  write(fdout, "\n\recho XXX  -- output XXX", strlen("\n\recho  -- print what you type")+1);
   write(fdout, "\n\rhello -- output 'HELLO!!' ", strlen("\n\"\n\rhello -- output 'HELLO!!' ")+1);
   write(fdout, "\n\rps    -- output the number of tasks", strlen("\n\rps    -- output the number of tasks")+1);
   
@@ -382,7 +434,7 @@ else if( (strncmp("hello\n",str,6)) == 0 )
 else if( (strncmp("echo ",str,5)) == 0 )
 { //write(fdout, "\n\r'HELLO'", strlen("\n\r'HELLO'")+1);
 	int i=5;
-	//write(fdout,"\r\n",3); //會出問題???
+	//write(fdout,"\r\n",3); 
 	write(fdout,"\n",2);
 	write(fdout,"\r",2);
 	while(str[i] != '\n')
@@ -392,9 +444,28 @@ else if( (strncmp("echo ",str,5)) == 0 )
     }
 }
 else if( (strncmp("ps\n",str,4)) == 0)
-{
-}
+{   
+	int i;
+	char string[6];
+	write(fdout, "\n\r", 3);
+	for(i = 0; i < task_count; i++)
+    {
+        itoa(tasks[i].pid, string);
+        write(fdout, string, strlen(string)+1);
+        write(fdout, "\t", 2);
+		
+		if(strcmp("TASK_READY",tasks[i].status)){write(fdout, "TASK READY\t", 12);}
+		else if(strcmp("TASK_WAIT_READ",tasks[i].status) ){write(fdout, "TASK_WAIT_READ\t", 16);}
+		else if(strcmp("TASK_WAIT_WRITE",tasks[i].status)){write(fdout, "TASK_WAIT_WRITE\t", 17);}
+		else if(strcmp("TASK_WAIT_INTR",tasks[i].status)){write(fdout, "TASK_WAIT_INTR\t", 16);}
+		else if(strcmp("TASK_WAIT_TIME",tasks[i].status)){write(fdout, "TASK_WAIT_TIME\t", 16);}
 
+        itoa(tasks[i].priority, string);
+        write(fdout, string, strlen(str)+1);
+        write(fdout, "\n\r",3);
+	}
+	
+}
 else
  { 
    write(fdout,"\n\rinput error,type help to get more information",48);
@@ -406,7 +477,7 @@ void and_shell()
 {
 	int fdout, fdin;
 	char str[100];
-	char ch; //有問題@@
+	char ch; 
 	char ch_type[2];
 	
 	int curr_char;
@@ -800,11 +871,13 @@ _mknod(struct pipe_ringbuffer *pipe, int dev)
 int main()
 {
 	unsigned int stacks[TASK_LIMIT][STACK_SIZE];
-	struct task_control_block tasks[TASK_LIMIT];
+	//struct task_control_block tasks[TASK_LIMIT];
 	struct pipe_ringbuffer pipes[PIPE_LIMIT];
 	struct task_control_block *ready_list[PRIORITY_LIMIT + 1];  /* [0 ... 39] */
 	struct task_control_block *wait_list = NULL;
-	size_t task_count = 0;
+	
+	
+	//size_t task_count = 0;
 	size_t current_task = 0;
 	size_t i;
 	struct task_control_block *task;
@@ -816,11 +889,15 @@ int main()
 	init_rs232();
 	__enable_irq();
 
+	/////////////////////////////////
 	tasks[task_count].stack = (void*)init_task(stacks[task_count], &first);
 	tasks[task_count].pid = 0;
 	tasks[task_count].priority = PRIORITY_DEFAULT;
 	task_count++;
-
+    /////////////////////////////////
+	
+	
+	
 	/* Initialize all pipes */
 	for (i = 0; i < PIPE_LIMIT; i++)
 		pipes[i].start = pipes[i].end = 0;
